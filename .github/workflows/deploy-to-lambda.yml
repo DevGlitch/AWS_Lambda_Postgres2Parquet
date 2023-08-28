@@ -1,0 +1,47 @@
+name: 🚀 Deploy to AWS Lambda
+
+on:
+  push:
+    branches:
+      - main
+  # Allows you to trigger this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Allow only one workflow run at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v2
+
+      - name: 📦 Install AWS CLI
+        run: |
+          # Install the AWS CLI
+          curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+        if: success() # Only run this step if the previous steps were successful
+
+      - name: 🚀 Deploy & Publish to AWS Lambda
+        run: |
+          LAMBDA_FUNCTION_NAME="Postgres2Parquet"
+          SOURCE_FILE="lambda_function.py"
+          
+          # Deploy the Python file to Lambda
+          aws lambda update-function-code \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --zip-file fileb://$SOURCE_FILE.zip
+          
+          # Publish a new version of the Lambda function
+          aws lambda publish-version \
+            --function-name $LAMBDA_FUNCTION_NAME
+
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
