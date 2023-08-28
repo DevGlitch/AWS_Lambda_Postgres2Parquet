@@ -28,8 +28,9 @@ def get_environment():
         EnvironmentError: If the 'ENVIRONMENT' environment variable is missing.
     """
     try:
+        logger.info("Getting environment...")
         environment = os.environ["ENVIRONMENT"]
-
+        logger.info(f"Environment set to {environment}")
         if environment == "production":
             staging = False
         elif environment == "staging":
@@ -103,11 +104,28 @@ def connect_to_db(db_name, db_user, db_password, db_host, db_port):
         raise ConnectionError(f"Database connection error: {e}")
 
 
-def query_database(conn, db_name, db_user, db_password, db_host, db_port):
+def read_sql_query_from_file(file_path):
+    """
+    Read and return the SQL query from a file.
+
+    Args:
+        file_path (str): Path to the SQL query file.
+
+    Returns:
+        str: SQL query as a string.
+    """
+    logger.info("Reading SQL query from file...")
+    with open(file_path, "r") as sql_file:
+        sql_query = sql_file.read()
+    return sql_query
+
+
+def query_database(conn, sql_query, db_name, db_user, db_password, db_host, db_port):
     """
     Execute a SQL query against the PostgreSQL database.
 
     Args:
+        sql_query (str): SQL query to execute.
         conn (psycopg2.extensions.connection): A PostgreSQL database connection.
         db_name (str): Name of the database.
         db_user (str): Database username.
@@ -118,61 +136,6 @@ def query_database(conn, db_name, db_user, db_password, db_host, db_port):
     Returns:
         pandas.DataFrame: Query result as a DataFrame.
     """
-
-    # Define SQL Query
-    sql_query = """SELECT artifacts.id
-                ,   artifacts.obj_id
-                ,   artifacts.artifact_type_id
-                ,   artifacts.sighting_obj_id
-                ,   artifacts.observation_id
-                ,   artifacts.user_label_foot
-                ,   artifacts.s3_image_name
-                ,   artifacts.expert_label_rating
-                ,   artifacts.expert_label_foot
-                ,   artifacts.user_comments as artifact_user_comments
-                ,   artifacts.expert_comments as artifact_expert_comments
-                ,   artifacts.expert_reviewed_at
-                ,   artifacts.expert_modified_at
-                ,   artifacts.expert_reviewed
-                ,   artifacts.taken_at
-                ,   artifact_types.name
-                ,   observations.uploaded_at
-                ,   observations.location_latitude
-                ,   observations.location_longitude
-                ,   observations.location_name
-                ,   observations.location_accuracy
-                ,   observations.location_utm_northing
-                ,   observations.location_utm_easting
-                ,   observations.location_utm_zone
-                ,   observations.user_label_animal_id
-                ,   observations.user_label_animal_name
-                ,   observations.user_label_captive_wild
-                ,   observations.user_label_dob
-                ,   observations.user_label_known_individual
-                ,   observations.user_label_sex
-                ,   observations.user_label_species_name
-                ,   observations.user_label_species_id
-                ,   observations.source
-                ,   observations.expert_label_animal_name
-                ,   observations.expert_label_sex
-                ,   observations.expert_label_species_name
-                ,   observations.expert_label_species_id
-                ,   observations.captive_wild
-                ,   observations.known_individual
-                ,   observations.individual_multiple
-                ,   observations.potential_individuals
-                ,   observations.user_comments
-                ,   observations.expert_comments
-                ,   users.first_name
-                ,   users.last_name
-                ,   users.email
-                ,   users.organization
-                ,   users.academic_affiliation
-                FROM artifacts
-                INNER JOIN artifact_types ON artifacts.artifact_type_id = artifact_types.id
-                INNER JOIN observations ON artifacts.observation_id = observations.id
-                INNER JOIN users ON observations.user_id = users.id;   """
-
     engine = create_engine(
         f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     )
@@ -266,11 +229,11 @@ def lambda_handler(event, context):
             path,
         ) = load_environment_variables(staging)
         conn = connect_to_db(db_name, db_user, db_password, db_host, db_port)
+        sql_query = read_sql_query_from_file("query.sql")
 
         try:
             query_result = query_database(
-                conn, db_name, db_user, db_password, db_host, db_port
-            )
+                conn, sql_query, db_name, db_user, db_password, db_host, db_port)
             write_to_s3_or_local(query_result, staging, file_name, path)
         finally:
             conn.close()

@@ -32,11 +32,13 @@ jobs:
         run: |
           LAMBDA_FUNCTION_NAME="Postgres2Parquet"
           SOURCE_FILE="lambda_function.py"
+          QUERY_FILE="query.sql"
           
-          # Deploy the Python file to Lambda
+          # Deploy the Python file and query.sql to Lambda
+          zip deployment.zip $SOURCE_FILE $QUERY_FILE
           aws lambda update-function-code \
             --function-name $LAMBDA_FUNCTION_NAME \
-            --zip-file fileb://$SOURCE_FILE.zip
+            --zip-file fileb://deployment.zip
           
           # Publish a new version of the Lambda function
           aws lambda publish-version \
