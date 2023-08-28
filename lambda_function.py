@@ -31,15 +31,15 @@ def get_environment():
         environment = os.environ["ENVIRONMENT"]
 
         if environment == "production":
-            testing = False
+            staging = False
         elif environment == "staging":
-            testing = True
+            staging = True
         else:
             raise ValueError(f"Invalid environment: {environment}")
     except KeyError as e:
         raise EnvironmentError(f"Missing required environment variable: {e}")
 
-    return testing
+    return staging
 
 
 def load_environment_variables(staging):
