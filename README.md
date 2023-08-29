@@ -26,20 +26,21 @@ These are used by the GitHub Actions deployment workflow to authenticate with AW
 
 In AWS, make sure to configure the following environment variables in your lambda function environment variables settings:
 
-| Parameter           | Description                                      |
-|---------------------|--------------------------------------------------|
-| **DB_NAME_PROD**    | Name of the production database.                |
-| **DB_NAME_STAGING** | Name of the staging database.                   |
-| **DB_USER**         | Database username.                               |
-| **DB_PASSWORD_PROD**| Database password for production.               |
-| **DB_PASSWORD_STAGING**| Database password for staging.               |
-| **DB_HOST_PROD**    | Database host.                                   |
-| **DB_HOST_STAGING** | Database host for staging.                      |
-| **DB_PORT_PROD**    | Database port.                                   |
-| **DB_PORT_STAGING** | Database port for staging.                      |
-| **FILE_NAME**       | Name of the output file.                         |
-| **S3_PATH**         | Storage path for Amazon S3 (production).        |
-| **LOCAL_PATH**      | Storage path for local storage (staging).       |
+| Parameter               | Description                                          |
+|-------------------------|------------------------------------------------------|
+| **ENVIRONMENT**         | Name of the environment (`production` or `staging`). |
+| **DB_NAME_PROD**        | Name of the production database.                     |
+| **DB_NAME_STAGING**     | Name of the staging database.                        |
+| **DB_USER**             | Database username.                                   |
+| **DB_PASSWORD_PROD**    | Database password for production.                    |
+| **DB_PASSWORD_STAGING** | Database password for staging.                       |
+| **DB_HOST_PROD**        | Database host.                                       |
+| **DB_HOST_STAGING**     | Database host for staging.                           |
+| **DB_PORT_PROD**        | Database port.                                       |
+| **DB_PORT_STAGING**     | Database port for staging.                           |
+| **FILE_NAME**           | Name of the output file.                             |
+| **S3_PATH**             | Storage path for Amazon S3 (production).             |
+| **LOCAL_PATH**          | Storage path for local storage (staging).            |
 
 ## Setup
 
