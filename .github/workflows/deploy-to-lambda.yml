@@ -44,7 +44,6 @@ jobs:
 
       - name: 🚀 Deploy & Publish to AWS Lambda
         run: |
-          set -x  # Enable debugging
           LAMBDA_FUNCTION_NAME="Postgres2Parquet"
           SOURCE_FILE="lambda_function.py"
           QUERY_FILE="query.sql"
@@ -68,3 +67,47 @@ jobs:
           
           # Publish a new version of the Lambda function
           aws lambda publish-version --function-name $LAMBDA_FUNCTION_NAME
+
+      - name: 📦 Update Lambda Layer
+        run: |
+          LAMBDA_FUNCTION_NAME="Postgres2Parquet"
+          LAYER_NAME="python-dependencies"
+
+          # Install pipenv
+          pip install pipenv
+
+          # Create a virtual environment and export requirements
+          pipenv install --deploy --ignore-pipfile
+          pipenv lock -r > requirements.txt
+
+          # Package Lambda Layer
+          mkdir python
+          pipenv lock -r > python/requirements.txt
+          zip -r my_lambda_layer.zip python/
+
+          # Check if the layer exists and get its ARN
+          layer_arn=$(aws lambda list-layers --query "Layers[?LayerName=='$LAYER_NAME'].LatestMatchingVersion.LayerVersionArn" --output text)
+
+          if [ -z "$layer_arn" ]; then
+            # Layer does not exist, create it
+            aws lambda publish-layer-version \
+                --layer-name $LAYER_NAME \
+                --description "Python Dependencies Layer" \
+                --compatible-runtimes python3.10 \
+                --license-info "MIT" \
+                --zip-file fileb://my_lambda_layer.zip
+          else
+            # Layer exists, update it using the latest version number
+            latest_version=$(aws lambda list-layer-versions --layer-name $LAYER_NAME --query "max_by(LayerVersions, &Version).Version" --output text)
+          
+            aws lambda update-function-layer-configuration \
+                --function-name $LAMBDA_FUNCTION_NAME \
+                --layer-name $LAYER_NAME \
+                --compatible-runtimes python3.10
+
+            aws lambda update-layer-version-code \
+                --layer-name $LAYER_NAME \
+                --version-number <LATEST_LAYER_VERSION_NUMBER> \
+                --zip-file fileb://my_lambda_layer.zip
+          fi
+        if: success() # Only run this step if the previous steps were successful
