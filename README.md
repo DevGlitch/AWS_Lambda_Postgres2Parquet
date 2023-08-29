@@ -2,6 +2,16 @@
 
 This repository contains Python code for an AWS Lambda function that connects to a PostgreSQL database, executes a SQL query, and writes the query result to either Amazon S3 or local storage in Parquet format. The function is designed to be triggered by an AWS Lambda event.
 
+[![AWS](https://img.shields.io/badge/Cloud-AWS-232F3E?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
+[![AWS Lambda](https://img.shields.io/badge/Serverless-AWS%20Lambda-FD971F?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/lambda/)
+[![Amazon RDS PostgreSQL](https://img.shields.io/badge/Database-Amazon%20RDS%20PostgreSQL-232F3E?logo=amazon-rds&logoColor=white)](https://aws.amazon.com/rds/post)
+[![Parquet](https://img.shields.io/badge/Data%20Format-Parquet-53A73E?logo=apache-parquet&logoColor=white)](https://parquet.apache.org/)
+[![Amazon S3](https://img.shields.io/badge/Storage-Amazon%20S3-FF9900?logo=amazon-s3&logoColor=white)](https://aws.amazon.com/s3/)
+[![Python](https://img.shields.io/badge/Code-Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Black](https://img.shields.io/badge/Code%20Style-Black-000000?logo=python&logoColor=white)](https://black.readthedocs.io/)
+[![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
+[![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
+
 ---
 
 ## 📂 Files
