@@ -49,7 +49,7 @@ jobs:
       # Run all the tests
       - name: 🧪 Tests with pytest
         run: |
-          pipenv run pytest --junitxml=pytest.xml -v --cov ./ --cov-exclude="test_lambda_function.py" > pytest-coverage.txt 
+          pipenv run pytest --junitxml=pytest.xml -v --cov ./ > pytest-coverage.txt 
 
       # Write the coverage report as a comment on the pull request
       - name: 💬 Pytest Coverage Comment
