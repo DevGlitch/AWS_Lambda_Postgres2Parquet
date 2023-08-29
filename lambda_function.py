@@ -170,10 +170,7 @@ def write_to_s3_or_local(data, staging, file_name, path):
         wr.s3.to_parquet(
             df=data,
             path=path + file_name,
-            dataset=False,
-            sanitize_columns=False,
-            overwrite=True,
-            storage_class="INTELLIGENT_TIERING",
+            s3_additional_kwargs={"StorageClass": "INTELLIGENT_TIERING"},  # Change to the desired storage class.
         )
     else:
         # Save the DataFrame to Parquet for local storage
