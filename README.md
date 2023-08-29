@@ -1,19 +1,41 @@
-# Postgres2Parquet Lambda Function
+# 🐘 Postgres2Parquet Lambda Function
 
 This repository contains Python code for an AWS Lambda function that connects to a PostgreSQL database, executes a SQL query, and writes the query result to either Amazon S3 or local storage in Parquet format. The function is designed to be triggered by an AWS Lambda event.
 
-## Files
+---
 
-1. **lambda_function.py**: Contains the Lambda function's code.
-2. **query.sql**: Contains the SQL query to be executed.
-3. **local_lambda_runner.py**: Script for running the Lambda function locally.
-4. **test_event.json**: Sample AWS Lambda event for running the Lambda function locally.
-5. **test_lambda_function.py**: Unit tests for the Lambda function.
-6. **Pipfile**: Dependency list for Pipenv.
-7. **.github/workflows/deploy-to-lambda.yml**: GitHub Actions workflow for automating Lambda function deployment.
-8. **.github/workflows/run-tests.yml**: GitHub Actions workflow for automating unit tests execution in PRs.
+## 📂 Files
 
-## Deploy Parameters
+1. `lambda_function.py`: Contains the Lambda function's code.
+
+
+2. `query.sql`: Contains the SQL query to be executed.
+
+
+3. `local_lambda_runner.py`: Script for running the Lambda function locally.
+
+
+4. `test_event.json`: Sample AWS Lambda event for running the Lambda function locally.
+
+
+5. `test_lambda_function.py`: Unit tests for the Lambda function.
+
+
+6. `Pipfile`: Dependency list for Pipenv.
+
+
+7. `Pipfile.lock`: Dependency lock file for Pipenv.
+
+
+8. `.github/workflows/deploy-to-lambda.yml`: GitHub Actions workflow for automating Lambda function deployment.
+
+ 
+9. `.github/workflows/run-tests.yml`: GitHub Actions workflow for automating unit tests execution in PRs.
+
+
+---
+
+## 🚀 Deploy Parameters
 
 In the GitHub repository Secrets, make sure to configure the following secret variables:
 
@@ -42,7 +64,9 @@ In AWS, make sure to configure the following environment variables in your lambd
 | **S3_PATH**             | Storage path for Amazon S3 (production).             |
 | **LOCAL_PATH**          | Storage path for local storage (staging).            |
 
-## Setup
+---
+
+## ⚙️ Setup
 
 To use this Lambda function, follow these steps:
 
@@ -76,10 +100,40 @@ To use this Lambda function, follow these steps:
 
 5. **GitHub Actions Deployment**: Automate deployment using GitHub Actions. Push changes to the main branch or trigger events to execute the deployment workflow defined in `.github/workflows/deploy-to-lambda.yml`.
 
-## Usage
+---
+
+## 🛠 Usage
 
 Once triggered, the Lambda function connects to the specified PostgreSQL database, executes the SQL query, and writes the result to the chosen storage location (S3 or local). Monitor execution and view errors in the AWS Lambda console.
 
-## Error Handling
+---
+
+## ❌ Error Handling
 
 The Lambda function includes error handling, logging exceptions, and returning a 500 status code with an error message in the response if an error occurs.
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🤝 Contributing
+
+You are welcome to contribute to this project by submitting a pull request. If you have any suggestions or problems, please open an issue. Thank you!
+
+---
+
+## 💖 Support
+
+Your support keeps this project going!
+
+- ⭐️ **Star**: Show your appreciation by giving this project a star.
+- ☕️ **[Buy Me a Coffee](https://github.com/sponsors/DevGlitch)**: Contribute by buying a virtual coffee.
+- 💼 **[Sponsor This Project](https://github.com/sponsors/DevGlitch)**: Consider sponsoring for ongoing support.
+
+
+
+Making a difference, one line of code at a time...
