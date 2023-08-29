@@ -37,10 +37,11 @@ def get_environment():
             staging = True
         else:
             raise ValueError(f"Invalid environment: {environment}")
+        return staging
     except KeyError as e:
-        raise EnvironmentError(f"Missing required environment variable: {e}")
-
-    return staging
+        return handle_error(f"Missing required environment variable: {e}")
+    except ValueError as e:
+        return handle_error(f"Invalid environment variable: {e}")
 
 
 def load_environment_variables(staging):
@@ -72,7 +73,7 @@ def load_environment_variables(staging):
         logger.info("Environment variables loaded")
         return db_name, db_user, db_password, db_host, db_port, file_name, path
     except KeyError as e:
-        raise EnvironmentError(f"Missing required environment variable: {e}")
+        return handle_error(f"Missing required environment variable: {e}")
 
 
 def connect_to_db(db_name, db_user, db_password, db_host, db_port):
@@ -101,7 +102,7 @@ def connect_to_db(db_name, db_user, db_password, db_host, db_port):
         logger.info("Connected to DB")
         return conn
     except psycopg2.OperationalError as e:
-        raise ConnectionError(f"Database connection error: {e}")
+        return handle_error(f"Database connection error: {e}")
 
 
 def read_sql_query_from_file(file_path):
@@ -114,10 +115,15 @@ def read_sql_query_from_file(file_path):
     Returns:
         str: SQL query as a string.
     """
-    logger.info("Reading SQL query from file...")
-    with open(file_path, "r") as sql_file:
-        sql_query = sql_file.read()
-    return sql_query
+    try:
+        logger.info("Reading SQL query from file...")
+        with open(file_path, "r") as sql_file:
+            sql_query = sql_file.read()
+        return sql_query
+    except FileNotFoundError as e:
+        return handle_error(f"SQL query file not found: {e}")
+    except IOError as e:
+        return handle_error(f"Error reading SQL query file: {e}")
 
 
 def query_database(conn, sql_query, db_name, db_user, db_password, db_host, db_port):
@@ -147,7 +153,7 @@ def query_database(conn, sql_query, db_name, db_user, db_password, db_host, db_p
             query_result = pd.read_sql_query(sql_query, engine)
         return query_result
     except Exception as e:
-        raise RuntimeError(f"Database query error: {e}")
+        return handle_error(f"Database query error: {e}")
 
 
 def write_to_s3_or_local(data, staging, file_name, path):
@@ -163,20 +169,23 @@ def write_to_s3_or_local(data, staging, file_name, path):
     Returns:
         None
     """
-    if not staging:
-        logger.info("Writing result to S3...")
-        # Write result to S3 when not in testing mode
-        wr.s3.to_parquet(
-            df=data,
-            path=path + file_name,
-            s3_additional_kwargs={"StorageClass": "INTELLIGENT_TIERING"},  # Change to the desired storage class.
-        )
-    else:
-        logger.info("Writing result to local storage...")
-        # Save the DataFrame to Parquet for local storage
-        data.to_parquet(path + file_name, index=False)
+    try:
+        if not staging:
+            logger.info("Writing result to S3...")
+            # Write result to S3 when not in testing mode
+            wr.s3.to_parquet(
+                df=data,
+                path=path + file_name,
+                s3_additional_kwargs={"StorageClass": "INTELLIGENT_TIERING"},  # Change to the desired storage class.
+            )
+        else:
+            logger.info("Writing result to local storage...")
+            # Save the DataFrame to Parquet for local storage
+            data.to_parquet(path + file_name, index=False)
 
-    logger.info(f"Result written to {path + file_name}")
+        logger.info(f"Result written to {path + file_name}")
+    except Exception as e:
+        return handle_error(f"Error writing data: {e}")
 
 
 def handle_error(error):
@@ -240,4 +249,4 @@ def lambda_handler(event, context):
         return {"statusCode": 200, "body": json.dumps("Success")}
 
     except Exception as e:
-        return handle_error(e)
+        return handle_error(f"Lambda handler error: {e}")
