@@ -10,7 +10,8 @@ psycopg2 = "*"
 sqlalchemy = "*"
 
 [dev-packages]
-coverage = "*"
+pytest = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.10"
