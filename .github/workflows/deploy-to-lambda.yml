@@ -1,9 +1,17 @@
 name: 🚀 Deploy to AWS Lambda
 
 on:
-  push:
-    branches:
-      - main
+  # Uncomment any of the following lines to trigger the workflow based on your needs
+
+  # Trigger the workflow on push or pull request,
+#  push:
+#    branches:
+#      - main
+
+  # Trigger the workflow on a schedule
+#  schedule:
+#      - cron: '0 0 * * *' # Run every day at midnight UTC
+
   # Allows you to trigger this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -15,7 +23,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v2
@@ -45,5 +52,6 @@ jobs:
             --function-name $LAMBDA_FUNCTION_NAME
 
         env:
+          # AWS credentials for AWS CLI which are stored in GitHub Secrets of the repository
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
