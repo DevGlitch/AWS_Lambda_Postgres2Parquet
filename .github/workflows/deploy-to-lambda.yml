@@ -1,0 +1,70 @@
+name: 🚀 Deploy to AWS Lambda
+
+on:
+  # Uncomment any of the following lines to trigger the workflow based on your needs
+
+  # Trigger the workflow on push or pull request,
+#  push:
+#    branches:
+#      - main
+
+  # Trigger the workflow on a schedule,
+#  schedule:
+#      - cron: '0 0 * * *' # Run every day at midnight UTC
+
+  # Allows you to trigger this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Allow only one workflow run at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v2
+
+      - name: 📦 Install AWS CLI
+        run: |
+          # Install the AWS CLI
+          curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+        if: success() # Only run this step if the previous steps were successful
+
+      - name: Configure AWS CLI
+        run: |
+          # AWS credentials for AWS CLI which are stored in GitHub Secrets of the repository
+          aws configure set region us-east-1
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: 🚀 Deploy & Publish to AWS Lambda
+        run: |
+          set -x  # Enable debugging
+          LAMBDA_FUNCTION_NAME="Postgres2Parquet"
+          SOURCE_FILE="lambda_function.py"
+          QUERY_FILE="query.sql"
+          
+          # Deploy the Python file and query.sql to Lambda
+          zip deployment.zip $SOURCE_FILE $QUERY_FILE
+          aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://deployment.zip
+          
+          # Check the status of the update
+          while true; do
+            status=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'LastUpdateStatus' --output text)
+            if [ "$status" = "Successful" ]; then
+              break  # Exit the loop when the update is successful
+            elif [ "$status" = "Failed" ]; then
+              echo "Lambda function update failed."
+              exit 1
+            else
+              sleep 5  # Sleep for 5 seconds before checking again
+            fi
+          done
+          
+          # Publish a new version of the Lambda function
+          aws lambda publish-version --function-name $LAMBDA_FUNCTION_NAME

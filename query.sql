@@ -1,0 +1,7 @@
+-- Insert here the query that you want to run on the database.
+-- This query is used to collect data for further processing in the Postgres2Parquet Lambda Function (lambda_function.py).
+--
+-- Example of a query:
+-- SELECT * FROM my_table WHERE my_column = 'my_value' AND my_column2 = 'my_value2' LIMIT 1000;
+--
+-- INSERT QUERY BELOW
