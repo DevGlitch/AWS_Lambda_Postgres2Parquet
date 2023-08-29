@@ -25,46 +25,83 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🛒 Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: 📦 Install AWS CLI
         run: |
           # Install the AWS CLI
-          curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install --update
+          echo "Installing AWS CLI..."
+          curl -sS "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update  >/dev/null
+          echo "AWS CLI installation complete."
         if: success() # Only run this step if the previous steps were successful
 
       - name: Configure AWS CLI
         run: |
+          echo "Configuring AWS CLI..."
           # AWS credentials for AWS CLI which are stored in GitHub Secrets of the repository
           aws configure set region us-east-1
           aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          echo "AWS CLI configured."
 
       - name: 🚀 Deploy & Publish to AWS Lambda
         run: |
-          set -x  # Enable debugging
           LAMBDA_FUNCTION_NAME="Postgres2Parquet"
           SOURCE_FILE="lambda_function.py"
           QUERY_FILE="query.sql"
           
           # Deploy the Python file and query.sql to Lambda
+          echo "Creating deployment package..."
           zip deployment.zip $SOURCE_FILE $QUERY_FILE
-          aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://deployment.zip
+          echo "Uploading deployment package to Lambda..."
+          aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://deployment.zip > /dev/null 2>&1
           
           # Check the status of the update
           while true; do
-            status=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'LastUpdateStatus' --output text)
+            status=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'LastUpdateStatus' --output text 2>/dev/null || true)
             if [ "$status" = "Successful" ]; then
+              echo "Lambda function update completed successfully."              
               break  # Exit the loop when the update is successful
             elif [ "$status" = "Failed" ]; then
               echo "Lambda function update failed."
               exit 1
             else
+              echo "Checking Lambda function update status..."
               sleep 5  # Sleep for 5 seconds before checking again
             fi
           done
           
           # Publish a new version of the Lambda function
+          echo "Publishing new version of the lambda function...
           aws lambda publish-version --function-name $LAMBDA_FUNCTION_NAME
+          echo "New lambda function version published."
+
+      - name: 📦 Create Lambda Layer
+        run: |
+          LAMBDA_FUNCTION_NAME="Postgres2Parquet"
+          LAYER_NAME="postgres2parquet-test"
+          
+          echo "Creating a zip file containing the requirements..."
+          zip requirements.zip requirements.txt
+
+          # Create a new version of the Lambda layer
+          echo "Creating a new version of Lambda Layer..."
+          layer_version_arn=$(aws lambda publish-layer-version \
+              --layer-name $LAYER_NAME \
+              --description "Python Dependencies Layer" \
+              --compatible-runtimes python3.10 \
+              --license-info "MIT" \
+              --zip-file "fileb://requirements.zip" \
+              --query 'LayerVersionArn' \
+              --output text)
+
+          # Update the Lambda function configuration to use the new layer version
+          echo "Updating Lambda function to use the new layer version..."
+          aws lambda update-function-configuration \
+              --function-name $LAMBDA_FUNCTION_NAME \
+              --layers $layer_version_arn > /dev/null 2>&1
+
+          echo "Lambda Layer updated to use the new version."
+        if: success() # Only run this step if the previous steps were successful
