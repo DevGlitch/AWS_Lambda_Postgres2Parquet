@@ -161,3 +161,9 @@ cython_debug/
 
 # Data files
 /data/
+
+# Ignore files with junk naming conventions
+*junk*
+
+# Mac
+.DS_Store
