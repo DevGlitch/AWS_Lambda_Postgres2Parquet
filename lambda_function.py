@@ -163,9 +163,8 @@ def write_to_s3_or_local(data, staging, file_name, path):
     Returns:
         None
     """
-    logger.info("Writing result to S3 or local...")
-
     if not staging:
+        logger.info("Writing result to S3...")
         # Write result to S3 when not in testing mode
         wr.s3.to_parquet(
             df=data,
@@ -173,6 +172,7 @@ def write_to_s3_or_local(data, staging, file_name, path):
             s3_additional_kwargs={"StorageClass": "INTELLIGENT_TIERING"},  # Change to the desired storage class.
         )
     else:
+        logger.info("Writing result to local storage...")
         # Save the DataFrame to Parquet for local storage
         data.to_parquet(path + file_name, index=False)
 
