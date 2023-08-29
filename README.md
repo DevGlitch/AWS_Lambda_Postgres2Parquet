@@ -8,7 +8,7 @@ This repository contains Python code for an AWS Lambda function that connects to
 2. **query.sql**: Contains the SQL query to be executed.
 3. **local_lambda_runner.py**: Script for running the Lambda function locally.
 4. **test_event.json**: Sample AWS Lambda event for running the Lambda function locally.
-5. **tests.py**: Unit tests for the Lambda function.
+5. **test_lambda_function.py**: Unit tests for the Lambda function.
 6. **Pipfile**: Dependency list for Pipenv.
 7. **.github/workflows/deploy-to-lambda.yml**: GitHub Actions workflow for automating Lambda function deployment.
 8. **.github/workflows/run-tests.yml**: GitHub Actions workflow for automating unit tests execution in PRs.
@@ -47,9 +47,33 @@ To use this Lambda function, follow these steps:
 
 1. **Environment Variables**: Set required environment variables, including database connection details (e.g., `DB_NAME_PROD`, `DB_USER`, `DB_PASSWORD_PROD`, etc.), output file name (`FILE_NAME`), and storage paths (`S3_PATH` and/or `LOCAL_PATH`).
 
+
 2. **AWS Lambda Configuration**: Create an AWS Lambda function and configure it to trigger based on your use case. Attach an execution role granting database access and S3 write permissions.
 
-3. **GitHub Actions Deployment**: Automate deployment using GitHub Actions. Push changes to the main branch or trigger events to execute the deployment workflow defined in `.github/workflows/deploy.yml`.
+
+3. **AWS IAM User for Lambda Deployment**: Create an AWS IAM user with 3rd Party Access with the following inline policy. Make sure to replace the placeholders with your region, account number, and Lambda function name.     Make sure to create the user's access key ID and secret access key and add them to your GitHub repository Secrets.
+
+```JSON
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": [
+				"lambda:UpdateFunctionCode",
+				"lambda:PublishVersion"
+			],
+			"Resource": "arn:aws:lambda:{REGION}:{ACCOUNT_NUMBER}:function:{LAMBDA_FUNCTION_NAME}"
+		}
+	]
+}
+```
+
+
+4. **SQL Query**: Create your SQL query to be executed by the Lambda function and save it in `query.sql`.
+
+
+5. **GitHub Actions Deployment**: Automate deployment using GitHub Actions. Push changes to the main branch or trigger events to execute the deployment workflow defined in `.github/workflows/deploy-to-lambda.yml`.
 
 ## Usage
 
