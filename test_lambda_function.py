@@ -1,12 +1,14 @@
 import os
+import psycopg2
 import unittest
 import pandas as pd
-from unittest.mock import MagicMock, Mock, patch, ANY
+from unittest.mock import MagicMock, Mock, patch, ANY, mock_open
 from local_lambda_runner import lambda_handler
 from lambda_function import (
     get_environment,
     load_environment_variables,
     connect_to_db,
+    read_sql_query_from_file,
     query_database,
     write_to_s3_or_local,
     handle_error,
@@ -37,9 +39,29 @@ class TestPostgres2ParquetLambdaFunction(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self.original_environ)
 
-    def test_get_environment(self):
+    def test_get_environment_staging(self):
         # Test get_environment function
         self.assertTrue(get_environment())  # Environment is set to 'staging'
+
+    def test_get_environment_production(self):
+        os.environ["ENVIRONMENT"] = "production"
+        self.assertFalse(get_environment())  # Environment is set to 'production'
+
+    def test_get_environment_missing_var(self):
+        del os.environ["ENVIRONMENT"]
+        response = get_environment()
+        self.assertEqual(response,
+                         {"statusCode": 500, "body": "Error: Missing required environment variable: 'ENVIRONMENT'"})
+
+    def test_get_environment_invalid_value(self):
+        os.environ["ENVIRONMENT"] = "invalid"
+        response = get_environment()
+        self.assertEqual(response, {"statusCode": 500, "body": "Error: Invalid environment variable: Invalid environment: invalid"})
+
+    def test_load_environment_variables_missing_var(self):
+        del os.environ["DB_NAME_STAGING"]
+        response = load_environment_variables(staging=True)
+        self.assertEqual(response, {"statusCode": 500, "body": "Error: Missing required environment variable: 'DB_NAME_STAGING'"})
 
     def test_load_environment_variables(self):
         # Test load_environment_variables function
@@ -61,10 +83,52 @@ class TestPostgres2ParquetLambdaFunction(unittest.TestCase):
                 port="port",
             )
 
+    def test_connect_to_db_error(self):
+        with patch("psycopg2.connect", side_effect=psycopg2.OperationalError("DB Error")):
+            response = connect_to_db("db_name", "user", "password", "host", "port")
+            self.assertEqual(response, {"statusCode": 500, "body": "Error: Database connection error: DB Error"})
+
     def test_query_database_exception(self):
         # Test query_database function with an expected exception
         with self.assertRaises(Exception):  # Replace 'Exception' with the actual exception type you expect
             query_result = query_database(None, "SELECT *", "db_name", "user", "password", "host", "port")
+
+    def test_read_sql_query_from_file_successful(self):
+        with patch("builtins.open", mock_open(read_data="SELECT * FROM test;")):
+            query = read_sql_query_from_file("query.sql")
+            self.assertEqual(query, "SELECT * FROM test;")
+
+    def test_read_sql_query_from_file_not_found(self):
+        with patch("builtins.open", mock_open()) as m:
+            m.side_effect = FileNotFoundError("File not found")
+            response = read_sql_query_from_file("query.sql")
+            self.assertEqual(response, {"statusCode": 500, "body": "Error: SQL query file not found: File not found"})
+
+    def test_read_sql_query_from_file_ioerror(self):
+        m = mock_open()
+        with patch('builtins.open', m):
+            m.side_effect = IOError("Mocked IOError")
+
+            result = read_sql_query_from_file("query.sql")
+
+            assert result == {
+                "statusCode": 500,
+                "body": "Error: Error reading SQL query file: Mocked IOError"
+            }
+
+    def test_query_database_successful(self):
+        # Test database query success
+        mock_cursor = Mock()
+        mock_cursor.__enter__ = lambda x: mock_cursor
+        mock_cursor.__exit__ = lambda x, y, z, w: None
+
+        mock_conn = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        with patch("sqlalchemy.create_engine", return_value=mock_conn) as mock_create_engine, \
+                patch("pandas.read_sql_query", return_value=pd.DataFrame()):
+            response = query_database(mock_conn, "SELECT * FROM test;", "db_name", "user", "password", "host", "1234")
+            self.assertIsInstance(response, pd.DataFrame)
 
     def test_query_database_failure(self):
         # Test database query failure
@@ -92,6 +156,12 @@ class TestPostgres2ParquetLambdaFunction(unittest.TestCase):
                 path="s3://bucket/test.parquet",
                 s3_additional_kwargs={"StorageClass": "INTELLIGENT_TIERING"},
             )
+
+    def test_write_to_local(self):
+        with patch("pandas.DataFrame.to_parquet") as mock_to_parquet:
+            data = pd.DataFrame({"A": [1, 2]})
+            write_to_s3_or_local(data, staging=True, file_name="test.parquet", path="/local/")
+            mock_to_parquet.assert_called_once()
 
     def test_handle_error(self):
         error_message = "Test Error"
@@ -137,6 +207,11 @@ class TestPostgres2ParquetLambdaFunction(unittest.TestCase):
 
         # Verify the response
         self.assertEqual(response, {"statusCode": 200, "body": '"Success"'})
+
+    def test_lambda_handler_error(self):
+        with patch("lambda_function.get_environment", side_effect=Exception("General Error")):
+            response = lambda_handler(None, None)
+            self.assertEqual(response, {"statusCode": 500, "body": "Error: Lambda handler error: General Error"})
 
 
 if __name__ == "__main__":
