@@ -49,7 +49,7 @@ jobs:
       - name: 📦 Create Lambda Layer
         run: |
           LAYER_NAME="${LAMBDA_FUNCTION_NAME}-dependencies"
-          LAYER_DIR="python/lib/python3.10/site-packages"
+          LAYER_DIR="python/lib/python3.11/site-packages"
 
           # Install pipenv
           pip install pipenv
@@ -57,7 +57,7 @@ jobs:
           echo "Installing dependencies to the directory using Pipenv..."
           mkdir -p $LAYER_DIR
           pipenv install --deploy --ignore-pipfile
-          cp -r $(pipenv --venv)/lib/python3.10/site-packages/* $LAYER_DIR/
+          cp -r $(pipenv --venv)/lib/python3.11/site-packages/* $LAYER_DIR/
 
           echo "Creating a zip file containing the installed packages..."
           zip -r requirements.zip python/
