@@ -60,4 +60,6 @@ INNER JOIN
 INNER JOIN
     observations ON artifacts.observation_id = observations.id
 INNER JOIN
-    users ON observations.user_id = users.id;
+    users ON observations.user_id = users.id
+INNER JOIN
+    species ON observations.user_label_species_id = species.id;
