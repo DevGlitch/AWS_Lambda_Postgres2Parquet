@@ -213,6 +213,37 @@ class TestPostgres2ParquetLambdaFunction(unittest.TestCase):
             response = lambda_handler(None, None)
             self.assertEqual(response, {"statusCode": 500, "body": "Error: Lambda handler error: General Error"})
 
+    def test_query_database_exception_message(self):
+        with patch("psycopg2.connect") as mock_connect, \
+                patch("pandas.read_sql_query") as mock_read_sql_query:
+            mock_conn = mock_connect.return_value
+            mock_read_sql_query.side_effect = psycopg2.OperationalError("Operational Error")
+
+            response = query_database(
+                mock_conn, "SELECT *", "db_name", "user", "password", "host", "1234"
+            )
+
+            self.assertEqual(response, {
+                "statusCode": 500,
+                "body": "Error: Database query error: Operational Error"
+            })
+
+    @patch("lambda_function.wr.s3.to_parquet")
+    @patch("lambda_function.os.path.join")
+    def test_write_to_s3_exception(self, mock_join, mock_wr_s3):
+        mock_data = Mock(spec=pd.DataFrame)
+        mock_join.return_value = "s3_path/test.parquet"
+        mock_wr_s3.side_effect = Exception("S3 Write Error")
+
+        response = write_to_s3_or_local(
+            mock_data, False, "test.parquet", "s3_path/"
+        )
+
+        self.assertEqual(response, {
+            "statusCode": 500,
+            "body": "Error: Error writing data: S3 Write Error"
+        })
+
 
 if __name__ == "__main__":
     unittest.main()
