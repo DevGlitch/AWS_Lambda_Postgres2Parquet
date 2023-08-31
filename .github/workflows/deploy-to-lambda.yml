@@ -58,7 +58,7 @@ jobs:
           pip install psycopg2-binary sqlalchemy -t ./python
           zip -r my_lambda_layer.zip python/
 
-      - name: 📦 Upload Lambda Layer
+      - name: 📦 Upload and Link Lambda Layer
         run: |
           LAYER_NAME="${LAMBDA_FUNCTION_NAME}-dependencies"
           MY_LAYER_PATH="my_lambda_layer.zip"
@@ -73,11 +73,19 @@ jobs:
               --zip-file "fileb://$MY_LAYER_PATH" \
               --query 'LayerVersionArn' \
               --output text)
-
           echo "New layer version created successfully."
+
+          # Fetch existing Lambda layers
+          echo "Fetching existing layers for the Lambda function..."
+          EXISTING_LAYERS=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'Layers[*].LayerArn' --output text)
+
+          # Combine the existing and new layers
+          ALL_LAYERS="$EXISTING_LAYERS $LAYER_ARN"
+
+          # Update the Lambda function to include all layers
+          echo "Updating Lambda function with all layers..."
+          aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $ALL_LAYERS > /dev/null 2>&1
           
-          echo "Ensuring layer is linked to function..."
-          aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_ARN > /dev/null 2>&1
           # Check the status of the update
           while true; do
             status=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'LastUpdateStatus' --output text)
