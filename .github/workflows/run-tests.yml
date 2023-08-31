@@ -57,4 +57,4 @@ jobs:
         with:
           pytest-coverage-path: ./pytest-coverage.txt
           junitxml-path: ./pytest.xml
-          token: ${{ secrets.MY_PAT }}
+          github-token: ${{ secrets.MY_PAT }}
