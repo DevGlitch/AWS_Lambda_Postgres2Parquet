@@ -65,8 +65,21 @@ jobs:
           echo "New layer version created successfully."
           
           echo "Ensuring layer is linked to function..."
-          aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_ARN
-          echo "Layer linked to function successfully."
+          aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_ARN > /dev/null 2>&1
+          # Check the status of the update
+          while true; do
+            status=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'LastUpdateStatus' --output text)
+            if [ "$status" = "Successful" ]; then
+              echo "Layer linked to function successfully."          
+              break  
+            elif [ "$status" = "Failed" ]; then
+              echo "Layer update failed."
+              exit 1
+            else
+              echo "Checking Layer update status..."
+              sleep 5  
+            fi
+          done
 
       - name: 🚀 Deploy Code to AWS Lambda
         run: |
@@ -111,8 +124,21 @@ jobs:
                         "FILE_NAME":"${{ secrets.FILE_NAME }}"
                     }
                 }'
-            echo "Lambda function environment variables updated."
-
+            
+            # Check the status of the update
+            while true; do
+              status=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'LastUpdateStatus' --output text)
+              if [ "$status" = "Successful" ]; then
+                echo "Lambda function environment variables updated."
+                break  
+              elif [ "$status" = "Failed" ]; then
+                echo "Lambda function environment variables update failed."
+                exit 1
+              else
+                echo "Checking Lambda function environment variables update status..."
+                sleep 5  
+              fi
+            done
 
       - name: 📤 Publish New Lambda Version
         run: |
