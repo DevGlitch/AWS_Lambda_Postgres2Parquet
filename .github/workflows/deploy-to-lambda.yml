@@ -49,7 +49,7 @@ jobs:
       - name: 📦 Upload Lambda Layer
         run: |
           LAYER_NAME="${LAMBDA_FUNCTION_NAME}-dependencies"
-          MY_LAYER_PATH="my_lambda_layer/my_lambda_layer.zip"
+          MY_LAYER_PATH="my_lambda_layer.zip"
 
           # Create a new version of the Lambda layer
           echo "Creating a new version of Lambda Layer..."
