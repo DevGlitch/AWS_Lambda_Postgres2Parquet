@@ -90,7 +90,7 @@ jobs:
           echo "Creating deployment package..."
           zip deployment.zip $SOURCE_FILE $QUERY_FILE
           echo "Uploading deployment package to Lambda..."
-          aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://deployment.zip
+          aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://deployment.zip > /dev/null 2>&1
           
           # Check the status of the update
           while true; do
@@ -123,7 +123,7 @@ jobs:
                         "S3_PATH":"${{ secrets.S3_PATH }}",
                         "FILE_NAME":"${{ secrets.FILE_NAME }}"
                     }
-                }'
+                }' > /dev/null 2>&1
             
             # Check the status of the update
             while true; do
@@ -145,15 +145,3 @@ jobs:
             echo "Publishing new version of the lambda function..."
             new_version=$(aws lambda publish-version --function-name $LAMBDA_FUNCTION_NAME --query 'Version' --output text)
             echo "New lambda function version $new_version published."
-
-      - name: 🧹 Cleanup Old Lambda Layers
-        run: |
-          LAYER_NAME="${LAMBDA_FUNCTION_NAME}-dependencies"
-          # Assuming you want to keep the latest 5 versions and delete the rest.
-          echo "Fetching Lambda layer versions..."
-          layer_versions=$(aws lambda list-layer-versions --layer-name $LAYER_NAME --query 'LayerVersions[5:].LayerVersionArn' --output text)
-          for arn in $layer_versions; do
-            aws lambda delete-layer-version --layer-name $LAYER_NAME --version-number $(echo $arn | cut -d ':' -f 8)
-            echo "Deleted an older layer version."
-          done
-          echo "Cleanup completed."
