@@ -170,4 +170,4 @@ cython_debug/
 .DS_Store
 
 # Lambda layer python
-/my_lambda_Layer/python/
+/my_lambda_layer/python/

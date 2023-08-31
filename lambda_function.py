@@ -176,12 +176,16 @@ def write_to_s3_or_local(data, staging, file_name, path):
             wr.s3.to_parquet(
                 df=data,
                 path=os.path.join(path, file_name),
-                s3_additional_kwargs={"StorageClass": "INTELLIGENT_TIERING"},  # Change to the desired storage class.
+                s3_additional_kwargs={
+                    "StorageClass": "INTELLIGENT_TIERING"
+                },  # Change to the desired storage class.
             )
         else:
             logger.info("Writing result to local storage...")
             # Save the DataFrame to Parquet for local storage
-            print(os.path.join(path, file_name),)
+            print(
+                os.path.join(path, file_name),
+            )
             data.to_parquet(os.path.join(path, file_name), index=False)
 
         logger.info(f"Result written to {path + file_name}")
@@ -240,7 +244,8 @@ def lambda_handler(event, context):
 
         try:
             query_result = query_database(
-                conn, sql_query, db_name, db_user, db_password, db_host, db_port)
+                conn, sql_query, db_name, db_user, db_password, db_host, db_port
+            )
             write_to_s3_or_local(query_result, staging, file_name, path)
         finally:
             conn.close()

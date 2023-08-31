@@ -49,7 +49,7 @@ jobs:
       - name: 📦 Upload Lambda Layer
         run: |
           LAYER_NAME="${LAMBDA_FUNCTION_NAME}-dependencies"
-          MY_LAYER_PATH="my_lambda_layer/my_lambda_layer.zip"
+          MY_LAYER_PATH="my_lambda_layer.zip"
 
           # Create a new version of the Lambda layer
           echo "Creating a new version of Lambda Layer..."
@@ -67,7 +67,7 @@ jobs:
           echo "Ensuring layer is linked to function..."
           aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_ARN
           echo "Layer linked to function successfully."
-        
+
       - name: 🚀 Deploy Code to AWS Lambda
         run: |
           SOURCE_FILE="lambda_function.py"
