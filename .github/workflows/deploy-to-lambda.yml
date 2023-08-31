@@ -64,12 +64,10 @@ jobs:
 
           echo "New layer version created successfully."
           
-          echo "New layer version created successfully: $LAYER_ARN"
-
           echo "Ensuring layer is linked to function..."
           aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_ARN
           echo "Layer linked to function successfully."
-
+        
       - name: 🚀 Deploy Code to AWS Lambda
         run: |
           SOURCE_FILE="lambda_function.py"
