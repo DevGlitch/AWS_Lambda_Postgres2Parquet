@@ -24,28 +24,25 @@ This function can also be configured to run locally and write the Parquet file t
 2. `query.sql`: Contains the SQL query to be executed.
 
 
-3. `my_lambda_layer.zip`: This file contains the compiled Python dependencies required for the Lambda function to operate seamlessly. This zipped layer is uploaded to AWS Lambda to ensure that the function has access to all the necessary libraries.
+3. `local_lambda_runner.py`: Script for running the Lambda function locally.
 
 
-4. `local_lambda_runner.py`: Script for running the Lambda function locally.
+4. `test_event.json`: Sample AWS Lambda event for running the Lambda function locally.
 
 
-5. `test_event.json`: Sample AWS Lambda event for running the Lambda function locally.
+5. `test_lambda_function.py`: Unit tests for the Lambda function.
 
 
-6. `test_lambda_function.py`: Unit tests for the Lambda function.
+6. `Pipfile`: Dependency list for Pipenv.
 
 
-7. `Pipfile`: Dependency list for Pipenv.
+7. `Pipfile.lock`: Dependency lock file for Pipenv.
 
 
-8. `Pipfile.lock`: Dependency lock file for Pipenv.
-
-
-9. `.github/workflows/deploy-to-lambda.yml`: GitHub Actions workflow for automating Lambda function deployment.
+8. `.github/workflows/deploy-to-lambda.yml`: GitHub Actions workflow for automating Lambda function deployment.
 
  
-10. `.github/workflows/run-tests.yml`: GitHub Actions workflow for automating unit tests execution in PRs.
+9. `.github/workflows/run-tests.yml`: GitHub Actions workflow for automating unit tests execution in PRs.
 
 
 ---
