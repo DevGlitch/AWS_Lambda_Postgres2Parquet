@@ -30,11 +30,6 @@ jobs:
       - name: 🛒 Checkout
         uses: actions/checkout@v3
 
-      - name: 🐍 Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
       - name: 🔧 Install AWS CLI
         run: |
           echo "Installing AWS CLI..."
@@ -51,35 +46,29 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           echo "AWS CLI configured."
 
-      - name: 📦 Create Lambda Layer
+      - name: 📦 Upload Lambda Layer
         run: |
           LAYER_NAME="${LAMBDA_FUNCTION_NAME}-dependencies"
-          LAYER_DIR="python/lib/python3.11/site-packages"
-
-          # Install pipenv
-          pip install pipenv
-
-          echo "Installing dependencies to the directory using Pipenv..."
-          mkdir -p $LAYER_DIR
-          pipenv install --deploy --ignore-pipfile
-          cp -r $(pipenv --venv)/lib/python3.11/site-packages/* $LAYER_DIR/
-
-          echo "Creating a zip file containing the installed packages..."
-          zip -r requirements.zip python/
+          MY_LAYER_PATH="my_lambda_layer/my_lambda_layer.zip"
 
           # Create a new version of the Lambda layer
           echo "Creating a new version of Lambda Layer..."
-          layer_version_arn=$(aws lambda publish-layer-version \
+          LAYER_ARN=$(aws lambda publish-layer-version \
               --layer-name $LAYER_NAME \
               --description "Python Dependencies Layer" \
               --compatible-runtimes python3.10 \
               --license-info "MIT" \
-              --zip-file "fileb://requirements.zip" \
+              --zip-file "fileb://$MY_LAYER_PATH" \
               --query 'LayerVersionArn' \
               --output text)
 
-          layer_version=$(echo $layer_version_arn | cut -d ':' -f 8)
-          echo "Layer version $layer_version created successfully."
+          echo "New layer version created successfully."
+          
+          echo "New layer version created successfully: $LAYER_ARN"
+
+          echo "Ensuring layer is linked to function..."
+          aws lambda update-function-configuration --function-name $LAMBDA_FUNCTION_NAME --layers $LAYER_ARN
+          echo "Layer linked to function successfully."
 
       - name: 🚀 Deploy Code to AWS Lambda
         run: |
