@@ -122,6 +122,7 @@ jobs:
 
       - name: 🧹 Cleanup Old Lambda Layers
         run: |
+          LAYER_NAME="${LAMBDA_FUNCTION_NAME}-dependencies"
           # Assuming you want to keep the latest 5 versions and delete the rest.
           echo "Fetching Lambda layer versions..."
           layer_versions=$(aws lambda list-layer-versions --layer-name $LAYER_NAME --query 'LayerVersions[5:].LayerVersionArn' --output text)
