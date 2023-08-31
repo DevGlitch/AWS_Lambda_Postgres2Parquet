@@ -23,68 +23,44 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      LAMBDA_FUNCTION_NAME: Postgres2Parquet
+
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v3
 
-      - name: 📦 Install AWS CLI
+      - name: 🔧 Install AWS CLI
         run: |
-          # Install the AWS CLI
           echo "Installing AWS CLI..."
           curl -sS "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip -q awscliv2.zip
-          sudo ./aws/install --update  >/dev/null
+          sudo ./aws/install --update
           echo "AWS CLI installation complete."
-        if: success() # Only run this step if the previous steps were successful
 
-      - name: Configure AWS CLI
+      - name: ⚙️ Configure AWS CLI
         run: |
           echo "Configuring AWS CLI..."
-          # AWS credentials for AWS CLI which are stored in GitHub Secrets of the repository
           aws configure set region us-east-1
           aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           echo "AWS CLI configured."
 
-      - name: 🚀 Deploy & Publish to AWS Lambda
-        run: |
-          LAMBDA_FUNCTION_NAME="Postgres2Parquet"
-          SOURCE_FILE="lambda_function.py"
-          QUERY_FILE="query.sql"
-          
-          # Deploy the Python file and query.sql to Lambda
-          echo "Creating deployment package..."
-          zip deployment.zip $SOURCE_FILE $QUERY_FILE
-          echo "Uploading deployment package to Lambda..."
-          aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://deployment.zip > /dev/null 2>&1
-          
-          # Check the status of the update
-          while true; do
-            status=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'LastUpdateStatus' --output text 2>/dev/null || true)
-            if [ "$status" = "Successful" ]; then
-              echo "Lambda function update completed successfully."              
-              break  # Exit the loop when the update is successful
-            elif [ "$status" = "Failed" ]; then
-              echo "Lambda function update failed."
-              exit 1
-            else
-              echo "Checking Lambda function update status..."
-              sleep 5  # Sleep for 5 seconds before checking again
-            fi
-          done
-          
-          # Publish a new version of the Lambda function
-          echo "Publishing new version of the lambda function...
-          aws lambda publish-version --function-name $LAMBDA_FUNCTION_NAME
-          echo "New lambda function version published."
-
       - name: 📦 Create Lambda Layer
         run: |
-          LAMBDA_FUNCTION_NAME="Postgres2Parquet"
-          LAYER_NAME="postgres2parquet-test"
-          
-          echo "Creating a zip file containing the requirements..."
-          zip requirements.zip requirements.txt
+          LAYER_NAME="${LAMBDA_FUNCTION_NAME}-dependencies"
+          LAYER_DIR="python/lib/python3.10/site-packages"
+
+          # Install pipenv
+          pip install pipenv
+
+          echo "Installing dependencies to the directory using Pipenv..."
+          mkdir -p $LAYER_DIR
+          pipenv install --deploy --ignore-pipfile
+          cp -r $(pipenv --venv)/lib/python3.10/site-packages/* $LAYER_DIR/
+
+          echo "Creating a zip file containing the installed packages..."
+          zip -r requirements.zip python/
 
           # Create a new version of the Lambda layer
           echo "Creating a new version of Lambda Layer..."
@@ -97,11 +73,68 @@ jobs:
               --query 'LayerVersionArn' \
               --output text)
 
-          # Update the Lambda function configuration to use the new layer version
-          echo "Updating Lambda function to use the new layer version..."
-          aws lambda update-function-configuration \
-              --function-name $LAMBDA_FUNCTION_NAME \
-              --layers $layer_version_arn > /dev/null 2>&1
+          layer_version=$(echo $layer_version_arn | cut -d ':' -f 8)
+          echo "Layer version $layer_version created successfully."
 
-          echo "Lambda Layer updated to use the new version."
-        if: success() # Only run this step if the previous steps were successful
+      - name: 🚀 Deploy Code to AWS Lambda
+        run: |
+          SOURCE_FILE="lambda_function.py"
+          QUERY_FILE="query.sql"
+          
+          # Deploy the Python file and query.sql to Lambda
+          echo "Creating deployment package..."
+          zip deployment.zip $SOURCE_FILE $QUERY_FILE
+          echo "Uploading deployment package to Lambda..."
+          aws lambda update-function-code --function-name $LAMBDA_FUNCTION_NAME --zip-file fileb://deployment.zip
+          
+          # Check the status of the update
+          while true; do
+            status=$(aws lambda get-function-configuration --function-name $LAMBDA_FUNCTION_NAME --query 'LastUpdateStatus' --output text)
+            if [ "$status" = "Successful" ]; then
+              echo "Lambda function update completed successfully."              
+              break  
+            elif [ "$status" = "Failed" ]; then
+              echo "Lambda function update failed."
+              exit 1
+            else
+              echo "Checking Lambda function update status..."
+              sleep 5  
+            fi
+          done
+
+      - name: 🌍 Update Lambda Environment Variables
+        run: |
+            echo "Updating Lambda function environment variables..."
+            aws lambda update-function-configuration \
+                --function-name $LAMBDA_FUNCTION_NAME \
+                --environment '{
+                    "Variables":{
+                        "ENVIRONMENT":"${{ secrets.ENVIRONMENT }}",
+                        "DB_NAME_PROD":"${{ secrets.DB_NAME_PROD }}",
+                        "DB_HOST_PROD":"${{ secrets.DB_HOST_PROD }}",
+                        "DB_PORT_PROD":"${{ secrets.DB_PORT_PROD }}",
+                        "DB_USER":"${{ secrets.DB_USER }}",
+                        "DB_PASSWORD_PROD":"${{ secrets.DB_PASSWORD_PROD }}",
+                        "S3_PATH":"${{ secrets.S3_PATH }}",
+                        "FILE_NAME":"${{ secrets.FILE_NAME }}"
+                    }
+                }'
+            echo "Lambda function environment variables updated."
+
+
+      - name: 📤 Publish New Lambda Version
+        run: |
+            echo "Publishing new version of the lambda function..."
+            new_version=$(aws lambda publish-version --function-name $LAMBDA_FUNCTION_NAME --query 'Version' --output text)
+            echo "New lambda function version $new_version published."
+
+      - name: 🧹 Cleanup Old Lambda Layers
+        run: |
+          # Assuming you want to keep the latest 5 versions and delete the rest.
+          echo "Fetching Lambda layer versions..."
+          layer_versions=$(aws lambda list-layer-versions --layer-name $LAYER_NAME --query 'LayerVersions[5:].LayerVersionArn' --output text)
+          for arn in $layer_versions; do
+            aws lambda delete-layer-version --layer-name $LAYER_NAME --version-number $(echo $arn | cut -d ':' -f 8)
+            echo "Deleted an older layer version."
+          done
+          echo "Cleanup completed."
